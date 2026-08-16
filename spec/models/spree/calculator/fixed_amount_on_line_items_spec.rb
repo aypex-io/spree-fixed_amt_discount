@@ -55,6 +55,16 @@ RSpec.describe Spree::Calculator::FixedAmountOnLineItems do
       end
     end
 
+    context 'when preferred_amount has more than 2 decimal places' do
+      let(:amount) { 10.555 }
+
+      it 'produces shares rounded to at most 2 decimal places' do
+        order = order_with_amounts(50, 50)
+
+        shares(order).each { |share| expect(share).to eq(share.round(2)) }
+      end
+    end
+
     it 'returns 0 when there are no line items' do
       order = create(:order, store: store, currency: 'USD')
       line_item = build(:line_item, order: order, price: 10, quantity: 1)
@@ -83,6 +93,35 @@ RSpec.describe Spree::Calculator::FixedAmountOnLineItems do
         order = order_with_amounts(50, 50)
 
         expect(shares(order)).to eq([BigDecimal('5'), BigDecimal('5')])
+      end
+    end
+
+    context 'when rounding the earlier shares would overshoot the budget' do
+      # 6 items @ 3.33 + 1 @ 0.01 = 19.99 total, budget 10. Each 3.33 item's
+      # exact share is 10 * 3.33 / 19.99 = 1.6658... Rounding that HALF-UP
+      # would give 1.67 * 6 = 10.02, already over budget, leaving the last
+      # item's remainder negative (10 - 10.02 = -0.02) -- which core negates
+      # into a positive surcharge. Flooring gives 1.66 * 6 = 9.96 instead, so
+      # the remainder stays non-negative.
+      let(:amount) { 10 }
+
+      it 'never produces a negative share' do
+        order = order_with_amounts(3.33, 3.33, 3.33, 3.33, 3.33, 3.33, 0.01)
+
+        shares(order).each { |share| expect(share).to be >= 0 }
+      end
+
+      it 'accepts a small shortfall rather than a surcharge' do
+        order = order_with_amounts(3.33, 3.33, 3.33, 3.33, 3.33, 3.33, 0.01)
+
+        # Each 3.33 item floors to 1.66 (10 * 3.33 / 19.99 = 1.6658... -> 1.66);
+        # six of them sum to 9.96. The last item (0.01) then gets
+        # 10 - 9.96 = 0.04, clamped to its own amount of 0.01. Total applied:
+        # 9.96 + 0.01 = 9.97 -- 3p short of the configured 10, and never over.
+        result = shares(order)
+
+        expect(result.sum).to eq(BigDecimal('9.97'))
+        expect(result.sum).to be <= BigDecimal('10')
       end
     end
 

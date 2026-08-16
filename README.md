@@ -12,7 +12,7 @@ share — and its tax — comes out correct.
 
 ## Installation
 
-Requires Spree >= 5.6.
+Requires Spree >= 5.6 and Ruby >= 3.3.
 
 ```bash
 bundle add spree-fixed_amt_discount
@@ -33,7 +33,10 @@ its amount and currency.
 - Because the split is proportional, the shares are rounded to the currency's
   minor unit and won't always sum exactly to the target amount. The last item
   (ordered by `id`) absorbs whatever rounding remainder is left, so the shares
-  always sum to the full discount.
+  usually sum to the full discount. In rare baskets where the rounding can't
+  divide cleanly, the applied total can fall a few pence short of the
+  configured amount — it will never go over, and a line item will never be
+  surcharged.
 - If the discount amount is larger than the actionable total, it clamps to
   that total — the order can be discounted to zero but never goes negative.
 - Line items excluded by the promotion's rules (e.g. per-item rules or

@@ -27,25 +27,34 @@ module Spree
       return 0 unless total.positive?
 
       # Clamp: a fixed amount larger than the basket discounts it to zero, never
-      # below. Matches Spree::Calculator::PercentOnLineItem.
-      budget = [preferred_amount, total].min
+      # below. Matches Spree::Calculator::PercentOnLineItem. Rounded to 2dp so a
+      # >2dp preferred_amount can't leave the last item's remainder off-currency.
+      budget = [preferred_amount, total].min.round(2)
 
       share =
         if line_item == items.last
           # The last item absorbs the rounding remainder so the shares sum to
-          # exactly the budget rather than drifting by a penny or two.
+          # (at most) the budget rather than drifting by a penny or two.
           budget - items[0..-2].sum { |item| pro_rata(item, budget, total) }
         else
           pro_rata(line_item, budget, total)
         end
 
-      [share, line_item.amount].min
+      # Guard against a negative remainder becoming a positive (surcharge)
+      # adjustment once Spree core negates it, and never exceed the item's own
+      # amount.
+      share.clamp(0, line_item.amount)
     end
 
     private
 
     def pro_rata(item, budget, total)
-      (budget * item.amount / total).round(2)
+      # Floor, not round: rounding earlier shares up can push their sum past
+      # the budget, forcing the last item's remainder negative -- which core
+      # would then negate into a positive surcharge on that line item.
+      # Flooring guarantees the running sum never exceeds the budget, so the
+      # remainder is provably non-negative (at worst it's a small shortfall).
+      (budget * item.amount / total).floor(2)
     end
 
     def actionable_line_items(order)
