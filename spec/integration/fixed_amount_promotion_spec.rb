@@ -62,5 +62,7 @@ RSpec.describe 'fixed amount promotion applied across line items' do
     apply(order)
 
     expect(order.total).to be >= 0
+    expect(order.line_items.flat_map(&:adjustments).sum(&:amount)).
+      to eq(BigDecimal('-30'))
   end
 end
