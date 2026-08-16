@@ -1,0 +1,3 @@
+en:
+  spree:
+    fixed_amount_on_line_items: "Fixed Amount (spread across line items)"
