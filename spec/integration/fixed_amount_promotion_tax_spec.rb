@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
-RSpec.describe 'fixed amount promotion and VAT inclusive tax' do
+RSpec.describe('fixed amount promotion with VAT inclusive tax') do
   let(:store) { Spree::Store.default }
   let(:zone) { create(:global_zone) }
 
@@ -60,22 +62,22 @@ RSpec.describe 'fixed amount promotion and VAT inclusive tax' do
     order.line_items.detect { |item| item.variant_id == product.master.id }
   end
 
-  it 'splits the discount evenly across the two items' do
-    expect(order.line_items.flat_map(&:adjustments).select(&:promotion?).sum(&:amount)).
-      to eq(BigDecimal('-12'))
+  it('splits the discount evenly across the two items') do
+    expect(order.line_items.flat_map(&:adjustments).select(&:promotion?).sum(&:amount))
+      .to eq(BigDecimal('-12'))
   end
 
-  it 'recalculates the standard rated item tax against its discounted amount' do
+  it('recalculates the standard rated item tax against its discounted amount') do
     # 54.00 * 20 / 120
     expect(line_item_for(standard_product).included_tax_total).to eq(BigDecimal('9.00'))
   end
 
-  it 'recalculates the reduced rated item tax against its discounted amount' do
+  it('recalculates the reduced rated item tax against its discounted amount') do
     # 54.00 * 5 / 105, rounded
     expect(line_item_for(reduced_product).included_tax_total).to eq(BigDecimal('2.57'))
   end
 
-  it 'produces a per-category tax total an order level adjustment could not' do
+  it('produces a per-category tax total an order level adjustment could not') do
     expect(order.included_tax_total).to eq(BigDecimal('11.57'))
   end
 end
