@@ -70,3 +70,9 @@ bundle exec rspec
 
 The gem is available as open source under the terms of the [MIT
 Licence](LICENSE).
+
+## Code of Conduct
+
+Everyone interacting in this project's codebases, issue trackers, and
+communication channels is expected to follow the [code of
+conduct](CODE_OF_CONDUCT.md).

@@ -1,0 +1,34 @@
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - spec/dummy/**/*
+    - vendor/**/*
+    - bin/**/*
+    - tmp/**/*
+
+Layout/LineLength:
+  Max: 160
+
+Style/Documentation:
+  Enabled: false
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+    - '*.gemspec'
+
+Metrics/MethodLength:
+  Max: 30
+
+Metrics/AbcSize:
+  Max: 25
+
+Metrics/CyclomaticComplexity:
+  Max: 10
+
+# Bundler auto-requires the hyphenated gem name; this shim exists so that works.
+Naming/FileName:
+  Exclude:
+    - lib/spree-fixed_amt_discount.rb

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
-RSpec.describe 'fixed amount promotion applied across line items' do
+RSpec.describe('fixed amount promotion applied across line items') do
   let(:store) { Spree::Store.default }
 
   let(:promotion) do
@@ -30,39 +32,43 @@ RSpec.describe 'fixed amount promotion applied across line items' do
     order.reload
   end
 
-  it 'creates one adjustment per line item' do
+  it('creates one adjustment per line item') do
     order = order_with_amounts(33.33, 33.33, 33.34)
-
     apply(order)
 
     expect(order.line_items.map { |item| item.adjustments.count }).to eq([1, 1, 1])
   end
 
-  it 'discounts the order by exactly the fixed amount' do
+  it('discounts the order by exactly the fixed amount') do
     order = order_with_amounts(33.33, 33.33, 33.34)
-
     apply(order)
 
     expect(order.line_items.flat_map(&:adjustments).sum(&:amount)).to eq(BigDecimal('-10'))
   end
 
-  it 'reduces the order item total by exactly the fixed amount' do
+  it('reduces the order item total by exactly the fixed amount') do
     order = order_with_amounts(50, 50)
-
     apply(order)
 
-    expect(order.item_total + order.line_items.flat_map(&:adjustments).sum(&:amount)).
-      to eq(BigDecimal('90'))
+    expect(order.item_total + order.line_items.flat_map(&:adjustments).sum(&:amount))
+      .to eq(BigDecimal('90'))
   end
 
-  it 'does not drive the order total negative when the amount exceeds the basket' do
-    promotion.actions.first.calculator.update!(preferred_amount: 500)
-    order = order_with_amounts(20, 10)
+  context 'when the amount exceeds the basket' do
+    it('does not drive the order total negative') do
+      promotion.actions.first.calculator.update!(preferred_amount: 500)
+      order = order_with_amounts(20, 10)
+      apply(order)
 
-    apply(order)
+      expect(order.total).to be >= 0
+    end
 
-    expect(order.total).to be >= 0
-    expect(order.line_items.flat_map(&:adjustments).sum(&:amount)).
-      to eq(BigDecimal('-30'))
+    it('clamps the discount to the basket total') do
+      promotion.actions.first.calculator.update!(preferred_amount: 500)
+      order = order_with_amounts(20, 10)
+      apply(order)
+
+      expect(order.line_items.flat_map(&:adjustments).sum(&:amount)).to eq(BigDecimal('-30'))
+    end
   end
 end

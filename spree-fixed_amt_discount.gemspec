@@ -1,4 +1,6 @@
-lib = File.expand_path('../lib/', __FILE__)
+# frozen_string_literal: true
+
+lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift lib unless $LOAD_PATH.include?(lib)
 
 require 'spree/fixed_amt_discount/version'
@@ -26,10 +28,8 @@ Gem::Specification.new do |s|
     'rubygems_mfa_required' => 'true'
   }
 
-  s.files = Dir['{app,config,lib}/**/*', 'LICENSE', 'Rakefile', 'README.md', 'CHANGELOG.md']
+  s.files = Dir['{app,config,lib}/**/*', 'LICENSE', 'CODE_OF_CONDUCT.md', 'Rakefile', 'README.md', 'CHANGELOG.md']
   s.require_path = 'lib'
 
   s.add_dependency 'spree', '>= 5.6.0'
-
-  s.add_development_dependency 'spree_dev_tools'
 end

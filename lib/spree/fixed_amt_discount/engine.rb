@@ -1,5 +1,15 @@
+# frozen_string_literal: true
+
 module Spree
   module FixedAmtDiscount
+    ##
+    # Rails engine that registers the fixed-amount calculator with Spree.
+    #
+    # Registration happens in +after_initialize+ because +spree_core+ assigns
+    # +config.spree.calculators.promotion_actions_create_item_adjustments+ with
+    # ++=+ in its own +after_initialize+. An engine initializer would run first
+    # and be overwritten.
+    #
     class Engine < ::Rails::Engine
       require 'spree/core'
       isolate_namespace Spree
