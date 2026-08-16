@@ -54,7 +54,29 @@ module Spree
       # Sorted by id so "the last item" -- the one absorbing the remainder --
       # is the same on every call. Core only computes against persisted line
       # items; the to_i keeps an unsaved one from raising on comparison.
-      order.line_items.to_a.sort_by { |item| item.id.to_i }
+      order.line_items.to_a.
+        select { |item| actionable?(order, item) }.
+        sort_by { |item| item.id.to_i }
+    end
+
+    # Excluded items must leave the actionable set entirely -- dropping them
+    # from the numerator alone would dilute the remaining items' shares and
+    # apply less than the promised amount.
+    def actionable?(order, item)
+      return false if preferred_apply_only_on_full_priced_items && on_sale?(item)
+      return true if promotion.nil?
+
+      promotion.line_item_actionable?(order, item)
+    end
+
+    def on_sale?(item)
+      item.variant&.compare_at_amount_in(item.currency).present?
+    end
+
+    # `calculable` is the Spree::Promotion::Actions::CreateItemAdjustments this
+    # calculator belongs to. A bare calculator (no action) has none.
+    def promotion
+      calculable.try(:promotion)
     end
   end
 end
