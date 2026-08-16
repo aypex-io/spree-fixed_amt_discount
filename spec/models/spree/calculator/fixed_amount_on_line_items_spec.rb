@@ -65,6 +65,42 @@ RSpec.describe Spree::Calculator::FixedAmountOnLineItems do
     it 'returns 0 when given nil' do
       expect(calculator.compute(nil)).to eq(0)
     end
+
+    context 'when the currency does not match' do
+      subject(:calculator) { described_class.new(preferred_amount: 10, preferred_currency: 'GBP') }
+
+      it 'returns 0' do
+        order = order_with_amounts(50, 50)
+
+        expect(shares(order)).to eq([0, 0])
+      end
+    end
+
+    context 'when the currency matches in a different case' do
+      subject(:calculator) { described_class.new(preferred_amount: 10, preferred_currency: 'usd') }
+
+      it 'still applies the discount' do
+        order = order_with_amounts(50, 50)
+
+        expect(shares(order)).to eq([BigDecimal('5'), BigDecimal('5')])
+      end
+    end
+
+    context 'when the fixed amount exceeds the actionable total' do
+      let(:amount) { 50 }
+
+      it 'clamps the total discount to the line items total' do
+        order = order_with_amounts(20, 10)
+
+        expect(shares(order).sum).to eq(BigDecimal('30'))
+      end
+
+      it 'never discounts a line item by more than its own amount' do
+        order = order_with_amounts(20, 10)
+
+        expect(shares(order)).to eq([BigDecimal('20'), BigDecimal('10')])
+      end
+    end
   end
 
   describe '.description' do

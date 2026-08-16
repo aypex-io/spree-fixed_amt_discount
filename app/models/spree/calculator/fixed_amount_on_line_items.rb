@@ -26,15 +26,20 @@ module Spree
       total = items.sum(&:amount)
       return 0 unless total.positive?
 
-      budget = preferred_amount
+      # Clamp: a fixed amount larger than the basket discounts it to zero, never
+      # below. Matches Spree::Calculator::PercentOnLineItem.
+      budget = [preferred_amount, total].min
 
-      if line_item == items.last
-        # The last item absorbs the rounding remainder so the shares sum to
-        # exactly the budget rather than drifting by a penny or two.
-        budget - items[0..-2].sum { |item| pro_rata(item, budget, total) }
-      else
-        pro_rata(line_item, budget, total)
-      end
+      share =
+        if line_item == items.last
+          # The last item absorbs the rounding remainder so the shares sum to
+          # exactly the budget rather than drifting by a penny or two.
+          budget - items[0..-2].sum { |item| pro_rata(item, budget, total) }
+        else
+          pro_rata(line_item, budget, total)
+        end
+
+      [share, line_item.amount].min
     end
 
     private
