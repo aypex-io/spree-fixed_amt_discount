@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_dependency 'spree/calculator'
+require_dependency "spree/calculator"
 
 module Spree
   ##
@@ -82,8 +82,8 @@ module Spree
       # is the same on every call. Core only computes against persisted line
       # items; the to_i keeps an unsaved one from raising on comparison.
       order.line_items.to_a
-           .select { |item| actionable?(order, item) }
-           .sort_by { |item| item.id.to_i }
+        .select { |item| actionable?(order, item) }
+        .sort_by { |item| item.id.to_i }
     end
 
     # Excluded items must leave the actionable set entirely -- dropping them

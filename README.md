@@ -66,6 +66,13 @@ bundle exec rake test_app
 bundle exec rspec
 ```
 
+### Code formatting
+
+```bash
+bundle exec standardrb
+bundle exec standardrb --fix
+```
+
 ## Licence
 
 The gem is available as open source under the terms of the [MIT
