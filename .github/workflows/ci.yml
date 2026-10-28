@@ -59,7 +59,9 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
       - name: Show resolved versions
-        run: bundle exec ruby -e 'puts "Ruby #{RUBY_VERSION}"; %w[spree spree_core rails].each { |g| puts "#{g} #{Gem.loaded_specs[g]&.version}" }'
+        # Block scalar: in a plain one-line value YAML reads " #" as a comment.
+        run: |
+          bundle exec ruby -e 'puts "Ruby #{RUBY_VERSION}"; %w[spree spree_core rails].each { |g| puts "#{g} #{Gem.loaded_specs[g]&.version}" }'
       - name: Install libvips
         run: sudo apt-get update && sudo apt-get install -y libvips
       - name: Create test app
