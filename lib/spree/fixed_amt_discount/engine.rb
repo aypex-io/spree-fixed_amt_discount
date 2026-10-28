@@ -11,9 +11,9 @@ module Spree
     # and be overwritten.
     #
     class Engine < ::Rails::Engine
-      require 'spree/core'
+      require "spree/core"
       isolate_namespace Spree
-      engine_name 'spree_fixed_amt_discount'
+      engine_name "spree_fixed_amt_discount"
 
       config.generators do |g|
         g.test_framework :rspec
