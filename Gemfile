@@ -4,6 +4,10 @@ source "https://rubygems.org"
 
 gemspec
 
+# CI runs a matrix of Spree versions. SPREE_VERSION pins one (e.g. "6.0.0");
+# left unset, Bundler resolves the newest release the gemspec allows.
+gem "spree", ENV["SPREE_VERSION"] unless ENV["SPREE_VERSION"].to_s.empty?
+
 gem "pg"
 gem "propshaft"
 gem "spree_dev_tools", ">= 1.0.0.beta2"
