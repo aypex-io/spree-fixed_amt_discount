@@ -73,3 +73,18 @@ jobs:
         run: bundle exec rake test_app
       - name: Run specs
         run: bundle exec rspec --format progress
+
+  # The single check branch protection requires, so the matrix can change
+  # without editing the protection rule. always(): a skipped required check
+  # counts as passed, so this must run and fail when anything above fails.
+  tests-passed:
+    name: Tests
+    if: always()
+    needs: [lint, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require lint and every matrix job to pass
+        run: |
+          echo "lint: ${{ needs.lint.result }}, tests: ${{ needs.tests.result }}"
+          test "${{ needs.lint.result }}" = success
+          test "${{ needs.tests.result }}" = success
