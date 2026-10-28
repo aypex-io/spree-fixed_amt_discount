@@ -10,9 +10,15 @@ wrong tax breakdown. This gem adds a calculator that spreads one fixed amount
 across the basket's line items in proportion to their value, so each item's
 share — and its tax — comes out correct.
 
+On Spree 6 a whole-order discount is already spread across **all** of a
+basket's line items and taxed per line. This calculator is still the one to
+use when the discount should land only on the items the promotion's rules
+select, or only on full-priced items (see `apply_only_on_full_priced_items`
+below).
+
 ## Installation
 
-Requires Spree >= 5.6 and Ruby >= 3.3.
+Requires Spree 6 and Ruby >= 3.3. For Spree 5.6, use the 0.1.x releases.
 
 ```bash
 bundle add spree-fixed_amt_discount
@@ -20,7 +26,7 @@ bundle add spree-fixed_amt_discount
 
 ## Usage
 
-In the Spree admin: **Promotion → Actions → Create per-line-item adjustment**,
+In the Spree dashboard: **Promotion → Actions → Create per-line-item adjustment**,
 then choose the **Fixed Amount (spread across line items)** calculator and set
 its amount and currency.
 

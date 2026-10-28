@@ -6,7 +6,7 @@ gemspec
 
 gem "pg"
 gem "propshaft"
-gem "spree_dev_tools"
+gem "spree_dev_tools", ">= 1.0.0.beta2"
 
 # spree_dev_tools depends on this transitively (for `assigns` in controller
 # specs) but never requires it, and it is a Railtie -- requiring it after boot

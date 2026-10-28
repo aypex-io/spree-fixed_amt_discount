@@ -2,34 +2,28 @@
 
 require "spec_helper"
 
+# Spree 6 decides whether prices include tax per market (`tax_inclusive`);
+# tax rates are per country and no longer say it themselves.
 RSpec.describe("fixed amount promotion with VAT inclusive tax") do
   let(:store) { Spree::Store.default }
-  let(:zone) { create(:global_zone) }
+  let(:cart) { create(:cart, store: store, currency: "USD") }
 
   let(:standard_category) { create(:tax_category, name: "Standard") }
   let(:reduced_category) { create(:tax_category, name: "Reduced") }
 
   let!(:standard_rate) do
-    create(:tax_rate,
-      zone: zone,
-      tax_category: standard_category,
-      amount: 0.20,
-      included_in_price: true)
+    create(:tax_rate, country_code: @default_country&.iso, tax_category: standard_category, amount: 0.20)
   end
 
   let!(:reduced_rate) do
-    create(:tax_rate,
-      zone: zone,
-      tax_category: reduced_category,
-      amount: 0.05,
-      included_in_price: true)
+    create(:tax_rate, country_code: @default_country&.iso, tax_category: reduced_category, amount: 0.05)
   end
 
-  let(:standard_product) { create(:product, price: 60, tax_category: standard_category) }
-  let(:reduced_product) { create(:product, price: 60, tax_category: reduced_category) }
+  let(:standard_product) { create(:product, price: 60, tax_category: standard_category, store: store) }
+  let(:reduced_product) { create(:product, price: 60, tax_category: reduced_category, store: store) }
 
-  let(:promotion) do
-    promo = create(:promotion, store: store, name: "Twelve off")
+  let!(:promotion) do
+    promo = create(:promotion, kind: :automatic, store: store, name: "Twelve off")
     Spree::Promotion::Actions::CreateItemAdjustments.create!(
       promotion: promo,
       calculator: Spree::Calculator::FixedAmountOnLineItems.new(
@@ -40,31 +34,20 @@ RSpec.describe("fixed amount promotion with VAT inclusive tax") do
     promo
   end
 
-  let(:order) do
-    order = create(:order_with_line_items,
-      store: store,
-      currency: "USD",
-      line_items_count: 0,
-      ship_address: create(:address))
-    create(:line_item, order: order, variant: standard_product.master, price: 60, quantity: 1, currency: "USD")
-    create(:line_item, order: order, variant: reduced_product.master, price: 60, quantity: 1, currency: "USD")
-    order.reload
-  end
-
   before do
-    promotion.actions.each { |action| action.perform(order: order, promotion: promotion) }
-    order.reload
-    order.update_with_updater!
-    order.reload
+    cart.market.update!(tax_inclusive: true)
+    [standard_product, reduced_product].each do |product|
+      expect(Spree::Carts::AddItem.call(cart: cart, variant: product.default_variant, quantity: 1)).to be_success
+    end
+    cart.reload
   end
 
   def line_item_for(product)
-    order.line_items.detect { |item| item.variant_id == product.master.id }
+    cart.line_items.detect { |item| item.variant_id == product.default_variant.id }
   end
 
   it("splits the discount evenly across the two items") do
-    expect(order.line_items.flat_map(&:adjustments).select(&:promotion?).sum(&:amount))
-      .to eq(BigDecimal("-12"))
+    expect(cart.line_items.flat_map(&:promotion_discounts).sum(&:amount)).to eq(BigDecimal("-12"))
   end
 
   it("recalculates the standard rated item tax against its discounted amount") do
@@ -78,6 +61,6 @@ RSpec.describe("fixed amount promotion with VAT inclusive tax") do
   end
 
   it("produces a per-category tax total an order level adjustment could not") do
-    expect(order.included_tax_total).to eq(BigDecimal("11.57"))
+    expect(cart.included_tax_total).to eq(BigDecimal("11.57"))
   end
 end

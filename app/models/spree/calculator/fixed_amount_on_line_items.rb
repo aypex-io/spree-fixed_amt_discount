@@ -10,16 +10,16 @@ module Spree
   #
   class Calculator::FixedAmountOnLineItems < Calculator
     preference :amount, :decimal, default: 0
-    preference :currency, :string, default: -> { Spree::Store.default.default_currency }
+    preference :currency, :string, default: -> { Spree::Store.default&.default_currency }
     preference :apply_only_on_full_priced_items, :boolean, default: false
 
     ##
-    # Translated label shown in the Spree admin calculator picker.
+    # Translated label shown in the Spree dashboard calculator picker.
     #
     # @return [String]
     #
     def self.description
-      Spree.t(:fixed_amount_on_line_items)
+      I18n.t("spree.fixed_amount_on_line_items")
     end
 
     ##
@@ -34,7 +34,9 @@ module Spree
     def compute(line_item = nil)
       return 0 unless applicable?(line_item)
 
-      items = actionable_line_items(line_item.order)
+      # A line item belongs to a cart during checkout and to an order once
+      # placed; `owner` is whichever it has.
+      items = actionable_line_items(line_item.owner)
       return 0 unless items.include?(line_item)
 
       total = items.sum(&:amount)
@@ -55,24 +57,27 @@ module Spree
     end
 
     # Clamp: a fixed amount larger than the basket discounts it to zero, never
-    # below. Matches Spree::Calculator::PercentOnLineItem. Rounded to 2dp so a
-    # >2dp preferred_amount can't leave the last item's remainder off-currency.
+    # below. Matches Spree::Calculator::PercentOnLineItem. Rounded to the
+    # currency's minor unit (2 places for most, 0 for yen) so a finer
+    # preferred_amount can't leave the last item's remainder off-currency;
+    # Spree refuses a discount with more decimals than its currency has.
     # The last item absorbs the rounding remainder so the shares sum to (at
     # most) the budget rather than drifting by a penny or two.
     def share_for(line_item, items, total)
-      budget = [preferred_amount, total].min.round(2)
+      budget = Spree::Money::Rounding.to_currency([preferred_amount, total].min, line_item.currency)
       return pro_rata(line_item, budget, total) unless line_item == items.last
 
       budget - items[0..-2].sum { |item| pro_rata(item, budget, total) }
     end
 
     def pro_rata(item, budget, total)
-      # Floor, not round: rounding earlier shares up can push their sum past
-      # the budget, forcing the last item's remainder negative -- which core
-      # would then negate into a positive surcharge on that line item.
-      # Flooring guarantees the running sum never exceeds the budget, so the
+      # Round down, not to nearest: rounding earlier shares up can push their
+      # sum past the budget, forcing the last item's remainder negative --
+      # which core would then negate into a positive surcharge on that line
+      # item. Rounding down (the same as flooring, since shares are never
+      # negative) guarantees the running sum never exceeds the budget, so the
       # remainder is provably non-negative (at worst it's a small shortfall).
-      (budget * item.amount / total).floor(2)
+      Spree::Money::Rounding.to_currency(budget * item.amount / total, item.currency, mode: :down)
     end
 
     def actionable_line_items(order)
