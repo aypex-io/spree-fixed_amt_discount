@@ -31,5 +31,5 @@ Gem::Specification.new do |s|
   s.files = Dir["{app,config,lib}/**/*", "LICENSE", "CODE_OF_CONDUCT.md", "Rakefile", "README.md", "CHANGELOG.md"]
   s.require_path = "lib"
 
-  s.add_dependency "spree", ">= 5.6.0"
+  s.add_dependency "spree", "~> 6.0"
 end

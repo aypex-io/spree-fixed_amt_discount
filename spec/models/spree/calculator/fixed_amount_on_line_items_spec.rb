@@ -57,9 +57,11 @@ RSpec.describe(Spree::Calculator::FixedAmountOnLineItems) do
       end
     end
 
-    it("returns 0 when there are no line items") do
-      order = create(:order, store: store, currency: "USD")
-      line_item = build(:line_item, order: order, price: 10, quantity: 1)
+    it("returns 0 when the line item belongs to no cart or order") do
+      # Nothing to spread the amount across. (Building a line item against an
+      # order now adds it to that order's line_items, so "an order with no
+      # line items" can no longer be set up this way.)
+      line_item = build(:line_item, order: nil, cart: nil, price: 10, quantity: 1, currency: "USD")
 
       expect(calculator.compute(line_item)).to eq(0)
     end
@@ -148,13 +150,13 @@ RSpec.describe(Spree::Calculator::FixedAmountOnLineItems) do
 
     let(:order) do
       order = create(:order, store: store, currency: "USD")
-      create(:line_item, order: order, variant: eligible_product.master, price: 50, quantity: 1, currency: "USD")
-      create(:line_item, order: order, variant: excluded_product.master, price: 50, quantity: 1, currency: "USD")
+      create(:line_item, order: order, variant: eligible_product.default_variant, price: 50, quantity: 1, currency: "USD")
+      create(:line_item, order: order, variant: excluded_product.default_variant, price: 50, quantity: 1, currency: "USD")
       order.reload
     end
 
     def line_item_for(product)
-      order.line_items.detect { |item| item.variant_id == product.master.id }
+      order.line_items.detect { |item| item.variant_id == product.default_variant.id }
     end
 
     it("gives excluded line items no discount") do
@@ -182,13 +184,13 @@ RSpec.describe(Spree::Calculator::FixedAmountOnLineItems) do
 
     let(:order) do
       order = create(:order, store: store, currency: "USD")
-      create(:line_item, order: order, variant: sale_product.master, price: 50, quantity: 1, currency: "USD")
-      create(:line_item, order: order, variant: full_priced_product.master, price: 50, quantity: 1, currency: "USD")
+      create(:line_item, order: order, variant: sale_product.default_variant, price: 50, quantity: 1, currency: "USD")
+      create(:line_item, order: order, variant: full_priced_product.default_variant, price: 50, quantity: 1, currency: "USD")
       order.reload
     end
 
     def line_item_for(product)
-      order.line_items.detect { |item| item.variant_id == product.master.id }
+      order.line_items.detect { |item| item.variant_id == product.default_variant.id }
     end
 
     it("gives sale items no discount") do
@@ -197,6 +199,39 @@ RSpec.describe(Spree::Calculator::FixedAmountOnLineItems) do
 
     it("does not let sale items dilute the full priced items share") do
       expect(calculator.compute(line_item_for(full_priced_product))).to eq(BigDecimal(10))
+    end
+  end
+
+  describe "#compute in a currency without minor units" do
+    # Spree 6 refuses a discount amount with more decimals than its currency
+    # has, so yen shares must be whole yen, not hard-coded to two places.
+    subject(:calculator) { described_class.new(preferred_amount: 1000, preferred_currency: "JPY") }
+
+    before { store.update!(supported_currencies: "USD,JPY") }
+
+    def yen_order_with_amounts(*amounts)
+      order = create(:order, store: store, currency: "JPY")
+      amounts.each do |item_amount|
+        create(:line_item, order: order, price: item_amount, quantity: 1, currency: "JPY")
+      end
+      order.reload
+    end
+
+    it("gives every line item a whole number of yen") do
+      expect(shares(yen_order_with_amounts(1000, 1000, 1001))).to all(satisfy { |share| share == share.round(0) })
+    end
+
+    it("never exceeds the configured amount") do
+      expect(shares(yen_order_with_amounts(1000, 1000, 1001)).sum).to be <= 1000
+    end
+  end
+
+  describe "preferred_currency default" do
+    it("falls back to nil instead of raising when there is no default store") do
+      # Spree 6: Store.default returns nil rather than building a store.
+      allow(Spree::Store).to receive(:default).and_return(nil)
+
+      expect(described_class.new.preferred_currency).to be_nil
     end
   end
 
